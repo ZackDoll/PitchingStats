@@ -1,0 +1,17 @@
+from pybaseball import statcast
+
+def start():
+    # User-inputted start and end date, can be changed later when form changes
+    # Earliest year allowed 2009, latest 2025
+    startDate = input("Enter the start date (YYYY-MM-DD): ")
+    endDate = input("Enter the end date (YYYY-MM-DD): ")
+
+    # Creates the range of data
+    data = statcast(start_dt=startDate, end_dt=endDate)
+
+    # Save to CSV
+    data.to_csv(f"statcast_{startDate}_to_{endDate}.csv", index=False)
+
+    print(data.head())
+if __name__ == "__main__":
+    start()
