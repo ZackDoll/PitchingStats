@@ -1,0 +1,74 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+
+
+
+def start():
+    pitches = {0: "Change-up",
+               1: "Curveball",
+               2: "Cutter",
+               3: "Four-Seam Fastball",
+               4: "Screwball",
+               5: "Sinker",
+               6: "Slider",
+               7: "Splitter",
+               8: "Sweeper",
+               9: "Eephus",
+               10: "Slurve",
+               11: "Knuckleball",
+               12: "Knuckle-curve",
+               13: "Forkball"}
+    zones = {1: "High left strike",
+             2: "High middle strike",
+             3: "High right strike",
+             4: "Middle left strike",
+             5: "Dead center",
+             6: "Middle right strike",
+             7: "Bottom left strike",
+             8: "Bottom middle strike",
+             9: "Bottom right strike",
+             11: "High left ball",
+             12: "High right ball",
+             13: "Low left ball",
+             14: "Low right ball"}
+    df = pd.read_csv("statcast_2024-05-01_to_2024-05-31.csv")
+    # DEPENDENT: pitch_type, zone (Do each individually)
+    # INDEPENDENT:  balls, strikes, Eventually: p_throws, description
+    #first test - pitch_type
+    y = df['pitch_type']
+    x = pd.read_csv("statcast_2024-05-01_to_2024-05-31.csv", usecols=['balls', 'strikes'])
+
+    #split the test data and the training data (change random_state to a diff number to get diff prediction model)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
+    #train the model
+    model = LogisticRegression(multi_class='multinomial', max_iter=10000)
+    model.fit(x_train, y_train)
+
+    pitch_type_probabilities = model.predict_proba(x_test)
+    pitch_type_percentages = pitch_type_probabilities * 100
+
+    print(pitch_type_percentages[0])
+
+
+    #second test - zone
+    y = df['zone']
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
+    model = LogisticRegression(multi_class='multinomial', max_iter=10000)
+    model.fit(x_train, y_train)
+
+    zone_probabilities = model.predict_proba(x_test)
+    zone_percentages = zone_probabilities * 100
+    print(x_test.iloc[0])
+
+
+    print(zone_percentages[0])
+
+    print(f"Most Likely Pitch: {np.argmax(pitch_type_percentages[0])}")
+    print(f"Most Likely Zone: {np.argmax(zone_percentages[0]) + 1}")
+
+if __name__ == "__main__":
+    start()
+
