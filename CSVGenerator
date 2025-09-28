@@ -1,17 +1,62 @@
 from pybaseball import statcast
-
-def start():
-    # User-inputted start and end date, can be changed later when form changes
-    # Earliest year allowed 2009, latest 2025
-    startDate = input("Enter the start date (YYYY-MM-DD): ")
-    endDate = input("Enter the end date (YYYY-MM-DD): ")
+import pandas as pd
+def get_csv():
+    start_date = input("Enter the start date (YYYY-MM-DD): ")
+    end_date = input("Enter the end date (YYYY-MM-DD): ")
 
     # Creates the range of data
-    data = statcast(start_dt=startDate, end_dt=endDate)
+    try:
+        data = statcast(start_dt=start_date, end_dt=end_date)
 
     # Save to CSV
-    data.to_csv(f"statcast_{startDate}_to_{endDate}.csv", index=False)
+        data.to_csv(f"statcast_{start_date}_to_{end_date}.csv", index=False)
 
-    print(data.head())
+        print(f"CSV Generated with name statcast_{start_date}_to_{end_date}.csv")
+    except Exception as e:
+        print(e)
+    # replace categorical names with numbers
+    """
+    KEY:
+    0 - CH - Change-up
+    1 - CU - Curveball
+    2 - FC - Cutter
+    3 - FF - Four-Seam Fastball
+    4 - SC - Screwball
+    5 - SI - Sinker
+    6 - SL - Slider
+    7 - FS - Splitter
+    8 - ST - Sweeper
+    9 - EP - Eephus
+    10 - SV - Slurve
+    11 - KN - Knuckleball
+    12 - KC - Knuckle-curve
+    13 - FO - Forkball
+    """
+    mapping = {
+        "CH": 0,
+        "CU": 1,
+        "FC": 2,
+        "FF": 3,
+        "SC": 4,
+        "SI": 5,
+        "SL": 6,
+        "FS": 7,
+        "ST": 8,
+        "EP": 9,
+        "SV": 10,
+        "KN": 11,
+        "KC": 12,
+        "FO": 13
+    }
+    df = pd.read_csv(f"statcast_{start_date}_to_{end_date}.csv")
+    # replaces the numbers using the dict as the framework
+    df['pitch_type'] = df['pitch_type'].map(mapping)
+    df = df.dropna(subset=['pitch_type'])
+
+    df.to_csv(f"statcast_{start_date}_to_{end_date}.csv", index=False)
+
+
+
+#only generate a new csv if it is the main
 if __name__ == "__main__":
-    start()
+    get_csv()
