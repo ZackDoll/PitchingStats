@@ -3,6 +3,15 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression
 
+#website imports
+from flask import Flask, request, jsonify
+import joblib
+
+
+"""
+TO DO LIST
+2. Attempt to make website (and fail probably)
+"""
 
 
 def start():
@@ -33,17 +42,18 @@ def start():
              12: "High right ball",
              13: "Low left ball",
              14: "Low right ball"}
-    df = pd.read_csv("statcast_2024-05-01_to_2024-05-31.csv")
+    df = pd.read_csv("statcast_stats.csv")
     # DEPENDENT: pitch_type, zone (Do each individually)
     # INDEPENDENT:  balls, strikes, Eventually: p_throws, description
     #first test - pitch_type
     y = df['pitch_type']
-    x = pd.read_csv("statcast_2024-05-01_to_2024-05-31.csv", usecols=['balls', 'strikes'])
+    x = pd.read_csv("statcast_stats.csv", usecols=['balls', 'strikes','stand', 'zone', 'pitch_type', 'outs_when_up', 
+                                                   'pfx_x', 'pfx_z', 'inning', 'at_bat_number', 'fld_score', 'bat_score'])
 
     #split the test data and the training data (change random_state to a diff number to get diff prediction model)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
     #train the model
-    model = LogisticRegression(multi_class='multinomial', max_iter=10000)
+    model = LogisticRegression(max_iter=10000)
     model.fit(x_train, y_train)
 
     pitch_type_probabilities = model.predict_proba(x_test)
@@ -54,20 +64,20 @@ def start():
 
     #second test - zone
     y = df['zone']
-
+    #train the model
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
-    model = LogisticRegression(multi_class='multinomial', max_iter=10000)
+    model = LogisticRegression(max_iter=10000)
     model.fit(x_train, y_train)
-
+    #get confidence values
     zone_probabilities = model.predict_proba(x_test)
     zone_percentages = zone_probabilities * 100
-    print(x_test.iloc[0])
-
 
     print(zone_percentages[0])
-
-    print(f"Most Likely Pitch: {np.argmax(pitch_type_percentages[0])}")
-    print(f"Most Likely Zone: {np.argmax(zone_percentages[0]) + 1}")
+    # gets the first test values (1 IS RIGHTY 0 IS LEFTY)
+    print(x_test.iloc[0])
+    #prints most likely pitch and zone from the single data point we chose
+    print(f"Most Likely Pitch: {pitches.get(np.argmax(pitch_type_percentages[0]))}")
+    print(f"Most Likely Zone: {zones.get(np.argmax(zone_percentages[0]) + 1)}")
 
 if __name__ == "__main__":
     start()
