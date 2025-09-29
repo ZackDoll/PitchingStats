@@ -1,17 +1,63 @@
+import numpy as np
+import pybaseball.cache
 from pybaseball import statcast
 import pandas as pd
+import warnings
 def get_csv():
-    start_date = input("Enter the start date (YYYY-MM-DD): ")
-    end_date = input("Enter the end date (YYYY-MM-DD): ")
+    global data_frame
 
+    frames = []
+    #saves each part of date(for a for loop later)
+    start_date = input("Enter the start date (YYYY-MM-DD): ")
+    start_year = int(start_date[0:4])
+    start_month = int(start_date[5:7])
+    start_day = int(start_date[8:10])
+
+    end_date = input("Enter the end date (YYYY-MM-DD): ")
+    end_year = int(end_date[0:4])
+    end_month = int(end_date[5:7])
+
+
+    # enables caching for easier download
+    pybaseball.cache.enable()
+    #to ignore the future warning for pybaseball hoping they fix it
+    warnings.simplefilter("ignore", FutureWarning)
     # Creates the range of data
     try:
-        data = statcast(start_dt=start_date, end_dt=end_date)
+        #creates a csv for each day and then combines them to ensure no lost data
+        while start_year != end_year or start_month != end_month:
+            #ensures no false dates arise
+            if start_month == 4 or start_month == 6 or start_month == 9 or start_month == 11:
+                end_day_temp = 30
+            elif start_month == 2:
+                end_day_temp = 28
+            else:
+                end_day_temp = 31
+            data_frame = statcast(start_dt=f"{start_year}-{start_month:02d}-{start_day:02d}", end_dt=f"{start_year}-{start_month:02d}-{end_day_temp:02d}")
+            start_day = 1
+            row_count = len(data_frame) if data_frame is not None else 0
+            print(f"{start_year}-{start_month:02d}-{start_day}: {row_count} rows")
 
-    # Save to CSV
-        data.to_csv(f"statcast_{start_date}_to_{end_date}.csv", index=False)
-
-        print(f"CSV Generated with name statcast_{start_date}_to_{end_date}.csv")
+            if data_frame is not None and not data_frame.empty:
+                frames.append(data_frame)
+            print(end_date)
+            # iteration
+            start_month += 1
+            if start_month == 13:
+                start_month = 1
+                start_year += 1
+        #gets the last frame from start of end_date to end_date
+        data_frame = statcast(start_dt=f"{start_year}-{start_month:02d}-01", end_dt=end_date)
+        frames.append(data_frame)
+        #combines all the data frames into one
+        full_frame = pd.concat(frames, ignore_index=True)
+        # Save to CSV
+        full_frame.to_csv("statcast_stats.csv", index=False)
+#test to see if rows get dropped
+        print(f"CSV Generated with name statcast_stats.csv")
+        print("\n--- Summary ---")
+        print(f"Months fetched: {len(frames)} with data")
+        print(f"Total rows before concat: {sum(len(f) for f in frames)}")
     except Exception as e:
         print(e)
     # replace categorical names with numbers
@@ -48,13 +94,35 @@ def get_csv():
         "KC": 12,
         "FO": 13
     }
-    df = pd.read_csv(f"statcast_{start_date}_to_{end_date}.csv")
-    # replaces the numbers using the dict as the framework
+    standmap = {
+        'L': 0,
+        'R': 1
+    }
+    df = pd.read_csv("statcast_stats.csv")
+    print(f"Rows saved in csv: {len(df)}")
+    # replaces the numbers using the dicts as the framework
     df['pitch_type'] = df['pitch_type'].map(mapping)
+    df['stand'] = df['stand'].map(standmap)
+    #gets rid of null values
     df = df.dropna(subset=['pitch_type'])
+    # FIX FOR <UNSET> ROW IN STAND
+    # drop NaN
+    all_stats = ['stand', 'zone', 'pitch_type', 'outs_when_up', 'pfx_x', 'pfx_z', 'inning', 'at_bat_number', 'fld_score', 'bat_score']
+    # some of these are temp drops
+    df = df.dropna(subset=['stand'])
+    df = df.dropna(subset=['zone'])
+    df = df.dropna(subset=['outs_when_up'])
+    df = df.dropna(subset=['pfx_x'])
+    df = df.dropna(subset=['pfx_z'])
+    df = df.dropna(subset=['plate_x'])
+    df = df.dropna(subset=['plate_z'])
+    df = df.dropna(subset=['inning'])
+    df = df.dropna(subset=['at_bat_number'])
+    df = df.dropna(subset=['fld_score'])
+    df = df.dropna(subset=['bat_score'])
+    print(f"Rows saved in csv after purge: {len(df)}")
 
-    df.to_csv(f"statcast_{start_date}_to_{end_date}.csv", index=False)
-
+    df.to_csv("statcast_stats.csv", index=False)
 
 
 #only generate a new csv if it is the main
