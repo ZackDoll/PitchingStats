@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression
 
-#website imports
-from flask import Flask, request, jsonify
+#ML saver
 import joblib
 
 
@@ -47,16 +46,17 @@ def start():
     # INDEPENDENT:  balls, strikes, Eventually: p_throws, description
     #first test - pitch_type
     y = df['pitch_type']
-    x = pd.read_csv("statcast_stats.csv", usecols=['balls', 'strikes','stand', 'zone', 'pitch_type', 'outs_when_up', 
-                                                   'pfx_x', 'pfx_z', 'inning', 'at_bat_number', 'fld_score', 'bat_score'])
+    x = pd.read_csv("statcast_stats.csv", usecols=['balls', 'strikes','stand', 'outs_when_up', 'inning', 'fld_score', 'bat_score'])
 
     #split the test data and the training data (change random_state to a diff number to get diff prediction model)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
     #train the model
-    model = LogisticRegression(max_iter=10000)
-    model.fit(x_train, y_train)
+    pitch_model = LogisticRegression(max_iter=10000)
+    pitch_model.fit(x_train, y_train)
 
-    pitch_type_probabilities = model.predict_proba(x_test)
+
+
+    pitch_type_probabilities = pitch_model.predict_proba(x_test)
     pitch_type_percentages = pitch_type_probabilities * 100
 
     print(pitch_type_percentages[0])
@@ -66,10 +66,10 @@ def start():
     y = df['zone']
     #train the model
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.01, random_state=42)
-    model = LogisticRegression(max_iter=10000)
-    model.fit(x_train, y_train)
+    zone_model = LogisticRegression(max_iter=10000)
+    zone_model.fit(x_train, y_train)
     #get confidence values
-    zone_probabilities = model.predict_proba(x_test)
+    zone_probabilities =zone_model.predict_proba(x_test)
     zone_percentages = zone_probabilities * 100
 
     print(zone_percentages[0])
@@ -78,6 +78,10 @@ def start():
     #prints most likely pitch and zone from the single data point we chose
     print(f"Most Likely Pitch: {pitches.get(np.argmax(pitch_type_percentages[0]))}")
     print(f"Most Likely Zone: {zones.get(np.argmax(zone_percentages[0]) + 1)}")
+
+    #save both models as .pkl files
+    joblib.dump(pitch_model, "pitch_model.pkl")
+    joblib.dump(zone_model, "zone_model.pkl")
 
 if __name__ == "__main__":
     start()
