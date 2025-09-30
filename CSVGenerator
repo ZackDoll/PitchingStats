@@ -1,8 +1,32 @@
 import numpy as np
+import time
 import pybaseball.cache
 from pybaseball import statcast
 import pandas as pd
-import warnings
+def safe_statcast(start_dt, end_dt, retries=3, wait=5):
+    """
+    Tries to statcast, but if fails then doesnt crash program and continues
+    :param start_dt: string
+    :param end_dt: string
+    :param retries: int
+    :param wait: int
+    :return: pd.DataFrame
+    """
+    for attempt in range(retries):
+        try:
+            df = statcast(start_dt=start_dt, end_dt=end_dt)
+            #if df exists and has data
+            if df is not None and not df.empty:
+                return df
+            else:
+                print(f"No data for {start_dt} to {end_dt}")
+                return pd.DataFrame()
+        except Exception as e:
+            print(f"Attempt {attempt+1} failed for {start_dt}–{end_dt}: {e}")
+            time.sleep(wait)
+
+    print(f"Skipping {start_dt}–{end_dt} after {retries} failed attempts")
+    return pd.DataFrame()
 def get_csv():
     global data_frame
 
@@ -21,7 +45,6 @@ def get_csv():
     # enables caching for easier download
     pybaseball.cache.enable()
     #to ignore the future warning for pybaseball hoping they fix it
-    warnings.simplefilter("ignore", FutureWarning)
     # Creates the range of data
     try:
         #creates a csv for each day and then combines them to ensure no lost data
@@ -33,7 +56,7 @@ def get_csv():
                 end_day_temp = 28
             else:
                 end_day_temp = 31
-            data_frame = statcast(start_dt=f"{start_year}-{start_month:02d}-{start_day:02d}", end_dt=f"{start_year}-{start_month:02d}-{end_day_temp:02d}")
+            data_frame = safe_statcast(start_dt=f"{start_year}-{start_month:02d}-{start_day:02d}", end_dt=f"{start_year}-{start_month:02d}-{end_day_temp:02d}")
             start_day = 1
             row_count = len(data_frame) if data_frame is not None else 0
             print(f"{start_year}-{start_month:02d}-{start_day}: {row_count} rows")
@@ -47,7 +70,7 @@ def get_csv():
                 start_month = 1
                 start_year += 1
         #gets the last frame from start of end_date to end_date
-        data_frame = statcast(start_dt=f"{start_year}-{start_month:02d}-01", end_dt=end_date)
+        data_frame = safe_statcast(start_dt=f"{start_year}-{start_month:02d}-01", end_dt=end_date)
         frames.append(data_frame)
         #combines all the data frames into one
         full_frame = pd.concat(frames, ignore_index=True)
@@ -109,20 +132,20 @@ def get_csv():
     # drop NaN
     all_stats = ['stand', 'zone', 'pitch_type', 'outs_when_up', 'pfx_x', 'pfx_z', 'inning', 'at_bat_number', 'fld_score', 'bat_score']
     # some of these are temp drops
+    df = df.dropna(subset=['balls'])
+    df = df.dropna(subset=['strikes'])
     df = df.dropna(subset=['stand'])
     df = df.dropna(subset=['zone'])
     df = df.dropna(subset=['outs_when_up'])
-    df = df.dropna(subset=['pfx_x'])
-    df = df.dropna(subset=['pfx_z'])
-    df = df.dropna(subset=['plate_x'])
-    df = df.dropna(subset=['plate_z'])
     df = df.dropna(subset=['inning'])
-    df = df.dropna(subset=['at_bat_number'])
     df = df.dropna(subset=['fld_score'])
     df = df.dropna(subset=['bat_score'])
     print(f"Rows saved in csv after purge: {len(df)}")
 
     df.to_csv("statcast_stats.csv", index=False)
+    print(f"CSV corrected with name statcast_stats.csv")
+
+
 
 
 #only generate a new csv if it is the main
