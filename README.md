@@ -5,4 +5,5 @@ THIS IS A MASS DUMP FILE DO NOT COPY IT WILL NOT WORK
 backend-baseball and frontend have a more detailed and updated look at the files
 
 ONLY 2 UNIQUE FILES IN HERE
+
 CSVGen and modelGen
